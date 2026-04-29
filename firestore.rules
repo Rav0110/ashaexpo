@@ -1,0 +1,11 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // DEMO ONLY — open rules for hackathon demonstration.
+    // Do NOT use these rules in production.
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
