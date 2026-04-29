@@ -1,17 +1,34 @@
 import React from 'react';
 
 export default function VillageFilter({ villages, selected, onChange }) {
+  const baseBtnStyle = {
+    padding: '8px 16px', 
+    borderRadius: '100px', 
+    border: '1px solid',
+    fontWeight: 500, 
+    fontSize: '14px', 
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px'
+  };
+
+  const getActiveStyle = (isActive) => ({
+    borderColor: isActive ? 'var(--primary-color)' : 'var(--border-color)',
+    backgroundColor: isActive ? 'var(--primary-color)' : 'var(--card-bg)',
+    color: isActive ? '#fff' : 'var(--text-muted)',
+    boxShadow: isActive ? 'var(--shadow-sm)' : 'none',
+  });
+
   return (
-    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '24px', alignItems: 'center' }}>
+      <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-light)', marginRight: '4px' }}>
+        Filter:
+      </span>
       <button
         onClick={() => onChange('')}
-        style={{
-          padding: '8px 16px', borderRadius: 20, border: '1.5px solid',
-          borderColor: !selected ? '#1B5E20' : '#E0E0E0',
-          backgroundColor: !selected ? '#E8F5E9' : '#fff',
-          color: !selected ? '#1B5E20' : '#757575',
-          fontWeight: 600, fontSize: 14, cursor: 'pointer',
-        }}
+        style={{ ...baseBtnStyle, ...getActiveStyle(!selected) }}
       >
         All Villages
       </button>
@@ -19,15 +36,9 @@ export default function VillageFilter({ villages, selected, onChange }) {
         <button
           key={v}
           onClick={() => onChange(v)}
-          style={{
-            padding: '8px 16px', borderRadius: 20, border: '1.5px solid',
-            borderColor: selected === v ? '#1B5E20' : '#E0E0E0',
-            backgroundColor: selected === v ? '#E8F5E9' : '#fff',
-            color: selected === v ? '#1B5E20' : '#757575',
-            fontWeight: 600, fontSize: 14, cursor: 'pointer',
-          }}
+          style={{ ...baseBtnStyle, ...getActiveStyle(selected === v) }}
         >
-          📍 {v}
+          {v}
         </button>
       ))}
     </div>

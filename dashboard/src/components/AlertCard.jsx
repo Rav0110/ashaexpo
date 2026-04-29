@@ -6,38 +6,86 @@ export default function AlertCard({ alert, onAcknowledge, onViewPatient }) {
     ? alert.risk_flags
     : (() => { try { return JSON.parse(alert.risk_flags || '[]'); } catch { return []; } })();
   const isAcked = alert.status === 'acknowledged';
-  const borderColor = alert.risk_level === 'high' ? '#D32F2F' : '#F57C00';
+  const isHighRisk = alert.risk_level === 'high';
+  
+  const borderColor = isAcked ? 'var(--border-color)' : (isHighRisk ? 'var(--danger-color)' : 'var(--warning-color)');
+  const bgColor = isAcked ? '#fcfcfc' : (isHighRisk ? '#fffefc' : 'var(--card-bg)');
 
   return (
     <div style={{
-      backgroundColor: '#fff', borderRadius: 14, padding: 20, marginBottom: 12,
-      borderLeft: `5px solid ${borderColor}`,
-      boxShadow: '0 2px 8px rgba(0,0,0,0.06)', opacity: isAcked ? 0.7 : 1,
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <RiskBadge level={alert.risk_level} />
-        <span style={{ fontSize: 13, color: '#9E9E9E' }}>
-          {alert.created_at ? new Date(alert.created_at).toLocaleString('en-IN') : ''}
+      backgroundColor: bgColor, 
+      borderRadius: 'var(--radius-lg)', 
+      padding: '24px', 
+      marginBottom: '16px',
+      border: '1px solid var(--border-color)',
+      borderLeft: `4px solid ${borderColor}`,
+      boxShadow: isAcked ? 'none' : 'var(--shadow-sm)', 
+      opacity: isAcked ? 0.8 : 1,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '16px',
+      transition: 'all 0.2s ease',
+    }}
+    onMouseEnter={e => { if(!isAcked) e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
+    onMouseLeave={e => { if(!isAcked) e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <RiskBadge level={alert.risk_level} />
+          {isHighRisk && !isAcked && (
+             <span style={{ 
+               color: 'var(--danger-color)', fontSize: '12px', fontWeight: 700, 
+               display: 'flex', alignItems: 'center', gap: '4px',
+               animation: 'pulse 2s infinite'
+             }}>
+               ⚠️ URGENT
+             </span>
+          )}
+        </div>
+        <span style={{ fontSize: '13px', color: 'var(--text-light)', fontWeight: 500 }}>
+          {alert.created_at ? new Date(alert.created_at).toLocaleString('en-IN', {
+            hour: 'numeric', minute: 'numeric', hour12: true,
+            day: 'numeric', month: 'short'
+          }) : ''}
         </span>
       </div>
 
-      <h3 style={{ margin: '8px 0 4px', fontSize: 18, fontWeight: 700, color: '#212121' }}>
-        {alert.patient_name || 'Unknown'}
-      </h3>
-      <p style={{ margin: 0, fontSize: 14, color: '#757575' }}>📍 {alert.village || 'N/A'}</p>
-
-      {alert.asha_phone && (
-        <p style={{ margin: '4px 0', fontSize: 14, color: '#1976D2' }}>
-          📞 <a href={`tel:${alert.asha_phone}`} style={{ color: '#1976D2' }}>{alert.asha_phone}</a>
-        </p>
-      )}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
+          <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: 'var(--text-main)' }}>
+            {alert.patient_name || 'Unknown Patient'}
+          </h3>
+          <button onClick={() => onViewPatient()} style={{
+            background: 'none', border: 'none', color: 'var(--primary-color)',
+            fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+            textDecoration: 'underline', textUnderlineOffset: '2px'
+          }}>
+            View Details
+          </button>
+        </div>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: 'var(--text-muted)', fontSize: '14px', marginTop: '8px' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+            {alert.village || 'N/A'}
+          </span>
+          
+          {alert.asha_phone && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+              <a href={`tel:${alert.asha_phone}`} style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>{alert.asha_phone}</a>
+            </span>
+          )}
+        </div>
+      </div>
 
       {flags.length > 0 && (
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           {flags.map((f, i) => (
             <span key={i} style={{
-              display: 'inline-block', padding: '3px 10px', borderRadius: 6,
-              backgroundColor: '#FFEBEE', color: '#D32F2F', fontSize: 12, fontWeight: 600,
+              display: 'inline-flex', alignItems: 'center', padding: '4px 12px', borderRadius: '6px',
+              backgroundColor: 'var(--danger-bg)', color: 'var(--danger-color)', 
+              fontSize: '12px', fontWeight: 600, border: '1px solid rgba(239, 68, 68, 0.2)'
             }}>
               {typeof f === 'string' ? f.replace(/_/g, ' ') : f}
             </span>
@@ -45,18 +93,30 @@ export default function AlertCard({ alert, onAcknowledge, onViewPatient }) {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '4px', display: 'flex', justifyContent: 'flex-end' }}>
         {!isAcked ? (
           <button onClick={() => onAcknowledge(alert.id)} style={{
-            padding: '10px 20px', borderRadius: 10, border: 'none', cursor: 'pointer',
-            backgroundColor: '#1B5E20', color: '#fff', fontWeight: 600, fontSize: 14,
+            padding: '10px 24px', 
+            borderRadius: 'var(--radius-md)', 
+            border: 'none', 
+            cursor: 'pointer',
+            backgroundColor: isHighRisk ? 'var(--danger-color)' : 'var(--primary-color)', 
+            color: '#fff', 
+            fontWeight: 600, 
+            fontSize: '14px',
+            boxShadow: 'var(--shadow-sm)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
           }}>
-            ✅ Acknowledge
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Acknowledge Alert
           </button>
         ) : (
-          <span style={{ padding: '10px 20px', borderRadius: 10, backgroundColor: '#E8F5E9', color: '#4CAF50', fontWeight: 600, fontSize: 14 }}>
-            ✅ Acknowledged {alert.acknowledged_at ? `at ${new Date(alert.acknowledged_at).toLocaleTimeString('en-IN')}` : ''}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--success-color)', fontWeight: 600, fontSize: '14px' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            Acknowledged {alert.acknowledged_at ? `at ${new Date(alert.acknowledged_at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: 'numeric', hour12: true })}` : ''}
+          </div>
         )}
       </div>
     </div>
