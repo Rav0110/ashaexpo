@@ -111,6 +111,50 @@ export function parseNote(note) {
     extracted.muac_cm = parseFloat(muacMatch[1]);
   }
 
+  // --- Weight ---
+  // Pattern: "52 kg", "55.5 kilo", "वजन 48"
+  const weightMatch = text.match(/(?:weight|wajan|wazan|वजन)?\s*(\d{2,3}(?:\.\d)?)\s*(?:kg|kilo|किलो)/i);
+  if (weightMatch) {
+    extracted.weight_kg = parseFloat(weightMatch[1]);
+  }
+
+  // --- Gestational weeks ---
+  // Pattern: "24 hafte", "28 weeks", "32 saptah"
+  const gestMatch = text.match(/(\d{1,2})\s*(?:hafte?|hafton?|weeks?|saptah|हफ्ते?|सप्ताह)/i);
+  if (gestMatch) {
+    const weeks = parseInt(gestMatch[1], 10);
+    // Only accept plausible gestational range (4-42 weeks)
+    if (weeks >= 4 && weeks <= 42) {
+      extracted.gestational_weeks = weeks;
+    }
+  }
+
+  // --- Trimester ---
+  // Pattern: "dusra trimester", "second trimester", "तीसरी तिमाही"
+  const trimesterMap = {
+    'pehla': 1, 'pahla': 1, 'first': 1, '1st': 1, 'पहली': 1, 'पहला': 1,
+    'dusra': 2, 'doosra': 2, 'second': 2, '2nd': 2, 'दूसरी': 2, 'दूसरा': 2,
+    'teesra': 3, 'tisra': 3, 'third': 3, '3rd': 3, 'तीसरी': 3, 'तीसरा': 3,
+  };
+  const trimMatch = text.match(/(pehla|pahla|first|1st|पहली|पहला|dusra|doosra|second|2nd|दूसरी|दूसरा|teesra|tisra|third|3rd|तीसरी|तीसरा)\s*(?:trimester|तिमाही|mahina)/i);
+  if (trimMatch) {
+    extracted.trimester = trimesterMap[trimMatch[1].toLowerCase()] || null;
+  }
+
+  // --- Visit type inference ---
+  // Pattern: "ANC visit", "TB follow up", "tika lagaya"
+  if (/(?:anc|ए\.?एन\.?सी\.?|ante\s*natal)/i.test(text)) {
+    extracted.visit_type_hint = 'ANC';
+  } else if (/(?:postnatal|post\s*natal|delivery\s*ke\s*baad|प्रसव\s*के\s*बाद)/i.test(text)) {
+    extracted.visit_type_hint = 'Postnatal';
+  } else if (/(?:tb\s*follow|tb\s*dawai|dots|टीबी\s*(?:दवाई|फॉलो))/i.test(text)) {
+    extracted.visit_type_hint = 'TB Follow-up';
+  } else if (/(?:tika|vaccine|vaccination|टीका|टीकाकरण)/i.test(text)) {
+    extracted.visit_type_hint = 'Vaccination';
+  } else if (/(?:bachcha|bachche|child|bacha|बच्चा|बच्चे|शिशु)/i.test(text)) {
+    extracted.visit_type_hint = 'Child';
+  }
+
   return extracted;
 }
 
@@ -158,6 +202,18 @@ export function getExtractionSummary(extracted) {
   }
   if (extracted.muac_cm) {
     lines.push(`MUAC: ${extracted.muac_cm} cm`);
+  }
+  if (extracted.weight_kg) {
+    lines.push(`Weight: ${extracted.weight_kg} kg (वजन)`);
+  }
+  if (extracted.gestational_weeks) {
+    lines.push(`Gestational Weeks: ${extracted.gestational_weeks} (${extracted.gestational_weeks} हफ्ते)`);
+  }
+  if (extracted.trimester) {
+    lines.push(`Trimester: ${extracted.trimester} (तिमाही)`);
+  }
+  if (extracted.visit_type_hint) {
+    lines.push(`Suggested Visit Type: ${extracted.visit_type_hint}`);
   }
 
   return lines;

@@ -4,7 +4,7 @@ import { playAlertSound } from '../services/audioService';
 import AlertCard from '../components/AlertCard';
 import VillageFilter from '../components/VillageFilter';
 import StatsCard from '../components/StatsCard';
-import PatientSidePanel from '../components/PatientSidePanel';
+import EscalationPanel from '../components/EscalationPanel';
 
 export default function AlertsPage() {
   const [alerts, setAlerts] = useState([]);
@@ -81,7 +81,7 @@ export default function AlertsPage() {
       </div>
 
       {selectedAlert && (
-        <PatientSidePanel alert={selectedAlert} onClose={() => setSelectedAlert(null)} />
+        <EscalationPanel alert={selectedAlert} onClose={() => setSelectedAlert(null)} />
       )}
     </div>
   );

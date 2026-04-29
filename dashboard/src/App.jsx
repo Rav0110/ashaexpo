@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import AlertsPage from './pages/AlertsPage';
 import ReportsPage from './pages/ReportsPage';
+import HeatmapPage from './pages/HeatmapPage';
+import CommandStrip from './components/CommandStrip';
 
 export default function App() {
   const [tab, setTab] = useState('alerts');
@@ -43,7 +45,8 @@ export default function App() {
         <nav style={{ display: 'flex', gap: '8px', backgroundColor: 'rgba(0,0,0,0.15)', padding: '4px', borderRadius: 'var(--radius-lg)' }}>
           {[
             { id: 'alerts', label: 'Alerts', icon: '🔔' },
-            { id: 'reports', label: 'Reports', icon: '📊' }
+            { id: 'reports', label: 'Reports', icon: '📊' },
+            { id: 'heatmap', label: 'Heatmap', icon: '🗺️' }
           ].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               padding: '8px 20px', 
@@ -66,9 +69,11 @@ export default function App() {
         </nav>
       </header>
 
+      <CommandStrip />
+
       {/* Content */}
       <main style={{ flex: 1, width: '100%', maxWidth: '1200px', margin: '0 auto', padding: '32px 24px' }}>
-        {tab === 'alerts' ? <AlertsPage /> : <ReportsPage />}
+        {tab === 'alerts' ? <AlertsPage /> : tab === 'reports' ? <ReportsPage /> : <HeatmapPage />}
       </main>
     </div>
   );
