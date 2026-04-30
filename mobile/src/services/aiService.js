@@ -16,8 +16,10 @@
 
 const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
 
+// Use flash-lite — separate (higher) free-tier quota from flash
+const GEMINI_MODEL = 'gemini-2.0-flash-lite';
 const GEMINI_ENDPOINT =
-  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+  `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 // ─── Valid enums (must match VISIT_TYPES in constants/visitTypes.js) ─────────
 
@@ -125,8 +127,8 @@ export async function processVoiceHealthInput(audioBase64, mimeType = 'audio/mp4
     };
 
     let response;
-    let retries = 3;
-    let delay = 1000;
+    let retries = 4;
+    let delay = 2000;
 
     while (retries > 0) {
       response = await fetch(GEMINI_ENDPOINT, {
@@ -138,10 +140,21 @@ export async function processVoiceHealthInput(audioBase64, mimeType = 'audio/mp4
       if (response.ok) break;
 
       if (response.status === 429 && retries > 1) {
-        console.warn(`[aiService] Rate limited (429). Retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        // Try to respect server's suggested retry delay
+        let serverDelay = delay;
+        try {
+          const errBody = await response.clone().json();
+          const retryInfo = errBody?.error?.details?.find(d => d['@type']?.includes('RetryInfo'));
+          if (retryInfo?.retryDelay) {
+            const secs = parseFloat(retryInfo.retryDelay);
+            if (!isNaN(secs) && secs > 0) serverDelay = Math.ceil(secs * 1000) + 500;
+          }
+        } catch { /* use default delay */ }
+        const waitMs = Math.min(serverDelay, 30000);
+        console.warn(`[aiService] Rate limited (429). Retrying in ${waitMs}ms... (${retries - 1} retries left)`);
+        await new Promise(resolve => setTimeout(resolve, waitMs));
         retries--;
-        delay *= 2;
+        delay = Math.min(delay * 2, 30000);
       } else {
         break;
       }
@@ -150,7 +163,11 @@ export async function processVoiceHealthInput(audioBase64, mimeType = 'audio/mp4
     if (!response.ok) {
       const errText = await response.text().catch(() => 'unknown');
       console.warn(`[aiService] API error ${response.status}: ${errText}`);
-      return getMockResponse();
+      // Return offline fallback with indicator
+      const mock = getMockResponse();
+      mock._offlineFallback = true;
+      mock._reason = response.status === 429 ? 'API quota exceeded — using local extraction only' : `API error ${response.status}`;
+      return mock;
     }
 
     const data = await response.json();

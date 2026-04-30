@@ -9,7 +9,7 @@ import AudioRecorder from '../components/AudioRecorder';
 import { VISIT_TYPE_OPTIONS, VISIT_TYPES } from '../constants/visitTypes';
 import { SYNC_PRIORITY } from '../constants/appConfig';
 import { getPatientById } from '../database/patientRepository';
-import { insertVisit } from '../database/visitRepository';
+import { insertVisit, getVisitsForPatientToday } from '../database/visitRepository';
 import { insertAlert } from '../database/alertRepository';
 import { enqueue } from '../database/syncQueueRepository';
 import { generateId } from '../utils/idGenerator';
@@ -43,6 +43,7 @@ export default function AddVisitScreen({ route, navigation }) {
   const [extractedSummary, setExtractedSummary] = useState([]);
   const [riskResult, setRiskResult] = useState(null);
   const [isProcessingAI, setIsProcessingAI] = useState(false);
+  const [existingTodayVisits, setExistingTodayVisits] = useState([]);
   const [fields, setFields] = useState({
     anc_number:'', trimester:'', bp_systolic:'', bp_diastolic:'',
     weight_kg:'', gestational_weeks:'', bleeding:false, seizure:false,
@@ -51,7 +52,13 @@ export default function AddVisitScreen({ route, navigation }) {
     tb_followup_missed:false, raw_note:'',
   });
 
-  useEffect(() => { if(patientId) getPatientById(patientId).then(setPatient); }, [patientId]);
+  useEffect(() => {
+    if (patientId) {
+      getPatientById(patientId).then(setPatient);
+      // Check for duplicate visits today
+      getVisitsForPatientToday(patientId).then(setExistingTodayVisits).catch(() => {});
+    }
+  }, [patientId]);
   const updateField = (k,v) => setFields(p => ({...p,[k]:v}));
 
   const handleParseNote = () => {
@@ -156,6 +163,21 @@ export default function AddVisitScreen({ route, navigation }) {
     if(!visitType){ Alert.alert('Required','Please select visit type'); return; }
     if(!patient){ Alert.alert('Error','Patient not found'); return; }
 
+    // Duplicate visit guard: warn if patient already visited today
+    if (existingTodayVisits.length > 0) {
+      const proceed = await new Promise(resolve => {
+        Alert.alert(
+          '⚠️ Duplicate Visit Warning',
+          `This patient already has ${existingTodayVisits.length} visit(s) recorded today (${existingTodayVisits.map(v => v.visit_type || 'Unknown').join(', ')}).\n\nAre you sure you want to add another visit?`,
+          [
+            { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+            { text: 'Add Anyway', style: 'destructive', onPress: () => resolve(true) },
+          ]
+        );
+      });
+      if (!proceed) return;
+    }
+
     // Auto-parse: if worker typed a raw_note but never pressed Parse, extract now
     if (fields.raw_note && !showExtracted) {
       const fallbackExt = parseNote(fields.raw_note);
@@ -248,6 +270,13 @@ export default function AddVisitScreen({ route, navigation }) {
       <Text style={s.title}>Add Visit / विजिट जोड़ें</Text>
       {patient&&<View style={s.banner}><Text style={s.bannerName}>👤 {patient.name}</Text>
         <Text style={s.bannerInfo}>{patient.age} yrs • {patient.village}</Text></View>}
+      {existingTodayVisits.length > 0 && (
+        <View style={s.dupWarning}>
+          <Text style={s.dupWarningText}>
+            ⚠️ This patient already has {existingTodayVisits.length} visit(s) today ({existingTodayVisits.map(v => v.visit_type || '?').join(', ')}). Adding another will create a duplicate record.
+          </Text>
+        </View>
+      )}
       {!patient&&<TouchableOpacity style={s.selectBtn} onPress={()=>navigation.navigate('PatientList')}>
         <Text style={s.selectText}>👤 Select Patient First</Text></TouchableOpacity>}
       <View style={s.form}>
@@ -307,4 +336,6 @@ const s = StyleSheet.create({
   riskFlag:{fontSize:14,color:colors.riskHigh,marginTop:4,fontWeight:'500'},
   saveBtn:{backgroundColor:colors.primary,padding:spacing.md,borderRadius:12,alignItems:'center',marginTop:8},
   saveTxt:{color:colors.textLight,fontSize:17,fontWeight:'600'},
+  dupWarning:{backgroundColor:'#FFF3E0',marginHorizontal:spacing.md,padding:spacing.md,borderRadius:10,borderLeftWidth:4,borderLeftColor:colors.warning,marginBottom:spacing.md},
+  dupWarningText:{fontSize:14,color:'#E65100',fontWeight:'500',lineHeight:20},
 });

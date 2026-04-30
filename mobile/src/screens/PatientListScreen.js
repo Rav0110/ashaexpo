@@ -4,14 +4,18 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors } from '../styles/colors';
 import { spacing } from '../styles/spacing';
 import { getAllPatients, searchPatients, filterPatientsByCondition } from '../database/patientRepository';
+import { getPatientRiskMap } from '../database/visitRepository';
 import PatientCard from '../components/PatientCard';
 import EmptyState from '../components/EmptyState';
 import { CONDITION_TYPE_OPTIONS } from '../constants/visitTypes';
+
+const RISK_ORDER = { high: 0, medium: 1, none: 2 };
 
 export default function PatientListScreen({ navigation }) {
   const [patients, setPatients] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState(null);
+  const [riskMap, setRiskMap] = useState({});
 
   const loadPatients = useCallback(async () => {
     try {
@@ -23,6 +27,22 @@ export default function PatientListScreen({ navigation }) {
       } else {
         result = await getAllPatients();
       }
+
+      // Load risk data for all patients
+      const map = await getPatientRiskMap();
+      setRiskMap(map);
+
+      // Sort by risk: high → medium → none → no visits
+      result.sort((a, b) => {
+        const aRisk = map[a.id]?.risk_level || 'none';
+        const bRisk = map[b.id]?.risk_level || 'none';
+        const aOrder = RISK_ORDER[aRisk] ?? 3;
+        const bOrder = RISK_ORDER[bRisk] ?? 3;
+        if (aOrder !== bOrder) return aOrder - bOrder;
+        // Secondary: newest patient first
+        return (b.created_at || '').localeCompare(a.created_at || '');
+      });
+
       setPatients(result);
     } catch (err) {
       console.error('Failed to load patients:', err);
@@ -44,8 +64,31 @@ export default function PatientListScreen({ navigation }) {
     }
   };
 
+  // Count by risk
+  const highCount = patients.filter(p => riskMap[p.id]?.risk_level === 'high').length;
+  const medCount = patients.filter(p => riskMap[p.id]?.risk_level === 'medium').length;
+
   return (
     <View style={styles.container}>
+      {/* Risk summary strip */}
+      {(highCount > 0 || medCount > 0) && (
+        <View style={styles.riskStrip}>
+          {highCount > 0 && (
+            <View style={styles.riskChip}>
+              <Text style={styles.riskChipDot}>🔴</Text>
+              <Text style={[styles.riskChipText, { color: colors.riskHigh }]}>{highCount} High Risk</Text>
+            </View>
+          )}
+          {medCount > 0 && (
+            <View style={styles.riskChip}>
+              <Text style={styles.riskChipDot}>🟡</Text>
+              <Text style={[styles.riskChipText, { color: colors.riskMedium }]}>{medCount} Medium Risk</Text>
+            </View>
+          )}
+          <Text style={styles.riskChipHint}>Sorted by priority</Text>
+        </View>
+      )}
+
       {/* Search */}
       <View style={styles.searchContainer}>
         <TextInput
@@ -82,6 +125,7 @@ export default function PatientListScreen({ navigation }) {
         renderItem={({ item }) => (
           <PatientCard
             patient={item}
+            riskInfo={riskMap[item.id]}
             onPress={() => navigation.navigate('PatientDetail', { patientId: item.id })}
           />
         )}
@@ -102,6 +146,34 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  riskStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    backgroundColor: '#FFF8E1',
+    borderBottomWidth: 1,
+    borderBottomColor: '#FFE082',
+    gap: 12,
+  },
+  riskChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  riskChipDot: {
+    fontSize: 10,
+  },
+  riskChipText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  riskChipHint: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginLeft: 'auto',
+    fontStyle: 'italic',
   },
   searchContainer: {
     paddingHorizontal: spacing.md,
