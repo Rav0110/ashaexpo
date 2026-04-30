@@ -61,65 +61,62 @@ function AppContent() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <header style={{
-        backgroundColor: 'var(--primary-color)', 
-        padding: '0 32px',
-        height: '72px',
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-        position: 'sticky',
-        top: 0,
-        zIndex: 50,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ 
-            backgroundColor: 'rgba(255,255,255,0.15)', 
-            color: '#fff',
-            width: '40px', height: '40px', borderRadius: 'var(--radius-md)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '20px'
-          }}>
-            🏥
+      {/* ══ HEADER — Command-Center Navigation ══════════════════════════ */}
+      <header className="dashboard-header">
+        {/* Layer 1: Identity Bar */}
+        <div className="header-identity">
+          <div className="header-brand">
+            <div className="header-logo">
+              <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" width="28" height="28">
+                <rect width="28" height="28" rx="8" fill="rgba(255,255,255,0.12)" />
+                <path d="M14 4L14 24M9 8L19 8M7 14H21M9 20H19" stroke="rgba(255,255,255,0.9)" strokeWidth="1.6" strokeLinecap="round"/>
+                <circle cx="14" cy="14" r="3" stroke="rgba(255,255,255,0.6)" strokeWidth="1.2"/>
+              </svg>
+            </div>
+            <div className="header-titles">
+              <h1 className="header-app-name">
+                Village Health Dashboard
+              </h1>
+              <div className="header-subtitle-row">
+                <span className="header-badge">SUPERVISOR</span>
+                <span className="header-region">District Operations Portal</span>
+              </div>
+            </div>
           </div>
-          <div>
-            <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#fff', letterSpacing: '-0.01em' }}>
-              Village Health Dashboard
-            </h1>
-            <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.8)', fontWeight: 500 }}>
-              Supervisor Portal
-            </p>
+
+          {/* Live Status Dot */}
+          <div className="header-live-status">
+            <span className="header-live-dot" />
+            <span className="header-live-text">LIVE</span>
           </div>
         </div>
-        
-        <nav style={{ display: 'flex', gap: '8px', backgroundColor: 'rgba(0,0,0,0.15)', padding: '4px', borderRadius: 'var(--radius-lg)' }}>
-          {[
-            { id: 'alerts', label: 'Alerts', icon: '🔔' },
-            { id: 'reports', label: 'Reports', icon: '📊' },
-            { id: 'heatmap', label: 'Heatmap', icon: '🗺️' },
-            { id: 'settings', label: 'Settings', icon: '⚙️' }
-          ].map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{
-              padding: '8px 20px', 
-              borderRadius: 'var(--radius-md)', 
-              border: 'none', 
-              cursor: 'pointer',
-              backgroundColor: tab === t.id ? '#fff' : 'transparent',
-              color: tab === t.id ? 'var(--primary-color)' : 'rgba(255,255,255,0.9)',
-              fontWeight: 600, 
-              fontSize: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              boxShadow: tab === t.id ? 'var(--shadow-sm)' : 'none',
-              transition: 'all 0.2s ease'
-            }}>
-              <span>{t.icon}</span> {t.label}
-            </button>
-          ))}
+
+        {/* Layer 2: Navigation Bar */}
+        <nav className="header-nav">
+          <div className="header-nav-inner">
+            {[
+              { id: 'alerts', label: 'Alerts', icon: (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>) },
+              { id: 'reports', label: 'Reports', icon: (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>) },
+              { id: 'heatmap', label: 'Heatmap', icon: (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>) },
+              { id: 'settings', label: 'Settings', icon: (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>) },
+            ].map(t => (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`header-nav-btn${tab === t.id ? ' active' : ''}`}
+              >
+                <span className="header-nav-icon">{t.icon}</span>
+                <span className="header-nav-label">{t.label}</span>
+                {t.id === 'alerts' && alerts.filter(a => a.risk_level === 'high' && a.status !== 'acknowledged').length > 0 && (
+                  <span className="header-nav-badge">{alerts.filter(a => a.risk_level === 'high' && a.status !== 'acknowledged').length}</span>
+                )}
+              </button>
+            ))}
+          </div>
         </nav>
+
+        {/* Layer 3: Accent Line */}
+        <div className="header-accent-line" />
       </header>
 
       <CommandStrip alerts={alerts} />

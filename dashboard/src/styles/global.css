@@ -464,12 +464,237 @@ select {
 }
 
 /* ═══════════════════════════════════════════════
+   DASHBOARD HEADER — Multi-Layer Command Center
+   ═══════════════════════════════════════════════ */
+
+.dashboard-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(165deg, #14401a 0%, #1B5E20 35%, #1a5c20 65%, #163d18 100%);
+  box-shadow:
+    0 1px 3px rgba(0,0,0,0.12),
+    0 4px 16px rgba(0,0,0,0.10),
+    inset 0 -1px 0 rgba(255,255,255,0.06);
+}
+
+/* ── Layer 1: Identity Bar ── */
+
+.header-identity {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 32px 8px 32px;
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.header-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
+  backdrop-filter: blur(4px);
+  transition: transform 0.2s ease;
+}
+.header-logo:hover { transform: scale(1.05); }
+
+.header-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.header-app-name {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+
+.header-subtitle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #1B5E20;
+  background: rgba(255,255,255,0.88);
+  line-height: 1.6;
+}
+
+.header-region {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.55);
+  letter-spacing: 0.01em;
+}
+
+.header-live-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px 5px 10px;
+  border-radius: 100px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.header-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4ADE80;
+  box-shadow: 0 0 6px rgba(74,222,128,0.6);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.header-live-text {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #4ADE80;
+}
+
+/* ── Layer 2: Navigation Bar ── */
+
+.header-nav {
+  padding: 0 32px 10px 32px;
+}
+
+.header-nav-inner {
+  display: flex;
+  gap: 2px;
+  background: rgba(0,0,0,0.18);
+  padding: 3px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.04);
+}
+
+.header-nav-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  color: rgba(255,255,255,0.55);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.header-nav-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  opacity: 0;
+  background: radial-gradient(circle at center, rgba(255,255,255,0.08) 0%, transparent 70%);
+  transition: opacity 0.25s ease;
+}
+
+.header-nav-btn:hover {
+  color: rgba(255,255,255,0.85);
+}
+.header-nav-btn:hover::before {
+  opacity: 1;
+}
+
+.header-nav-btn.active {
+  background: rgba(255,255,255,0.97);
+  color: #1B5E20;
+  box-shadow:
+    0 1px 3px rgba(0,0,0,0.12),
+    0 0 0 1px rgba(27,94,32,0.08),
+    inset 0 1px 0 rgba(255,255,255,1);
+  font-weight: 700;
+}
+.header-nav-btn.active::before { opacity: 0; }
+
+.header-nav-icon {
+  display: flex;
+  align-items: center;
+  opacity: 0.8;
+}
+.header-nav-btn.active .header-nav-icon {
+  opacity: 1;
+}
+
+.header-nav-label {
+  white-space: nowrap;
+}
+
+.header-nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 100px;
+  font-size: 10px;
+  font-weight: 800;
+  background: #EF4444;
+  color: #fff;
+  line-height: 1;
+  animation: pulse 2s ease-in-out infinite;
+}
+.header-nav-btn.active .header-nav-badge {
+  background: #DC2626;
+  color: #fff;
+}
+
+/* ── Layer 3: Accent Line ── */
+
+.header-accent-line {
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    #4ADE80 15%,
+    #22C55E 30%,
+    rgba(255,255,255,0.3) 50%,
+    #22C55E 70%,
+    #4ADE80 85%,
+    transparent 100%
+  );
+  opacity: 0.5;
+}
+
+/* ═══════════════════════════════════════════════
    COMMAND STRIP — Bloomberg-terminal Intelligence Rail
    ═══════════════════════════════════════════════ */
 
 .command-strip {
   position: sticky;
-  top: 72px;
+  top: 98px;
   z-index: 49;
   height: 34px;
   background: linear-gradient(90deg, #0d1a0d 0%, #111a11 100%);

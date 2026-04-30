@@ -98,3 +98,54 @@ export async function countVaccinations() {
   );
   return { due: due?.count || 0, given: given?.count || 0 };
 }
+
+/**
+ * Check if a patient already has a visit recorded today.
+ * Returns the existing visit(s) or an empty array.
+ */
+export async function getVisitsForPatientToday(patientId) {
+  const db = await getDatabase();
+  const today = new Date().toISOString().split('T')[0];
+  return db.getAllAsync(
+    "SELECT * FROM visits WHERE patient_id = ? AND created_at LIKE ? ORDER BY created_at DESC",
+    [patientId, `${today}%`]
+  );
+}
+
+/**
+ * Get the highest risk level for each patient (from their most recent visit).
+ * Returns an object mapping patient_id → { risk_level, risk_flags, last_visit_date }.
+ */
+export async function getPatientRiskMap() {
+  const db = await getDatabase();
+  // Get the latest visit per patient with its risk info
+  const rows = await db.getAllAsync(`
+    SELECT v.patient_id, v.risk_level, v.risk_flags, v.created_at
+    FROM visits v
+    INNER JOIN (
+      SELECT patient_id, MAX(created_at) as max_date
+      FROM visits
+      GROUP BY patient_id
+    ) latest ON v.patient_id = latest.patient_id AND v.created_at = latest.max_date
+  `);
+
+  const map = {};
+  for (const row of rows) {
+    // If multiple visits on the same max_date, pick the higher risk
+    if (!map[row.patient_id] || riskPriority(row.risk_level) > riskPriority(map[row.patient_id].risk_level)) {
+      map[row.patient_id] = {
+        risk_level: row.risk_level || 'none',
+        risk_flags: row.risk_flags || '[]',
+        last_visit_date: row.created_at,
+      };
+    }
+  }
+  return map;
+}
+
+function riskPriority(level) {
+  if (level === 'high') return 2;
+  if (level === 'medium') return 1;
+  return 0;
+}
+
