@@ -5,6 +5,7 @@ import { spacing } from '../styles/spacing';
 import FormInput from '../components/FormInput';
 import FormSelect from '../components/FormSelect';
 import RiskBadge from '../components/RiskBadge';
+import AudioRecorder from '../components/AudioRecorder';
 import { VISIT_TYPE_OPTIONS, VISIT_TYPES } from '../constants/visitTypes';
 import { SYNC_PRIORITY } from '../constants/appConfig';
 import { getPatientById } from '../database/patientRepository';
@@ -41,6 +42,7 @@ export default function AddVisitScreen({ route, navigation }) {
   const [showExtracted, setShowExtracted] = useState(false);
   const [extractedSummary, setExtractedSummary] = useState([]);
   const [riskResult, setRiskResult] = useState(null);
+  const [isProcessingAI, setIsProcessingAI] = useState(false);
   const [fields, setFields] = useState({
     anc_number:'', trimester:'', bp_systolic:'', bp_diastolic:'',
     weight_kg:'', gestational_weeks:'', bleeding:false, seizure:false,
@@ -72,9 +74,114 @@ export default function AddVisitScreen({ route, navigation }) {
     setShowExtracted(summary.length > 0);
   };
 
+  const handleAIResult = (aiJson) => {
+    if (!aiJson || typeof aiJson !== 'object') return;
+
+    // Set visitType FIRST so conditional fields render before merge
+    if (aiJson.visit_type) setVisitType(aiJson.visit_type);
+
+    // Merge into fields using same truthy-only overwrite pattern as handleParseNote
+    setFields(p => ({
+      ...p,
+      raw_note: aiJson.raw_note ? String(aiJson.raw_note) : p.raw_note,
+      bp_systolic: aiJson.bp_systolic ? String(aiJson.bp_systolic) : p.bp_systolic,
+      bp_diastolic: aiJson.bp_diastolic ? String(aiJson.bp_diastolic) : p.bp_diastolic,
+      temperature_c: aiJson.temperature_c ? String(aiJson.temperature_c) : p.temperature_c,
+      weight_kg: aiJson.weight_kg ? String(aiJson.weight_kg) : p.weight_kg,
+      anc_number: aiJson.anc_number ? String(aiJson.anc_number) : p.anc_number,
+      trimester: aiJson.trimester ? String(aiJson.trimester) : p.trimester,
+      gestational_weeks: aiJson.gestational_weeks ? String(aiJson.gestational_weeks) : p.gestational_weeks,
+      postnatal_day: aiJson.postnatal_day ? String(aiJson.postnatal_day) : p.postnatal_day,
+      muac_cm: aiJson.muac_cm ? String(aiJson.muac_cm) : p.muac_cm,
+      tb_cough_weeks: aiJson.tb_cough_weeks ? String(aiJson.tb_cough_weeks) : p.tb_cough_weeks,
+      bleeding: aiJson.bleeding === true ? true : p.bleeding,
+      seizure: aiJson.seizure === true ? true : p.seizure,
+      breathlessness: aiJson.breathlessness === true ? true : p.breathlessness,
+      vaccination_due: aiJson.vaccination_due === true ? true : p.vaccination_due,
+      vaccination_given: aiJson.vaccination_given === true ? true : p.vaccination_given,
+      tb_followup_missed: aiJson.tb_followup_missed === true ? true : p.tb_followup_missed,
+    }));
+
+    // Build summary lines for the existing extraction UI
+    const lines = [];
+    if (aiJson.visit_type) lines.push(`Visit Type: ${aiJson.visit_type}`);
+    if (aiJson.bp_systolic && aiJson.bp_diastolic) lines.push(`BP: ${aiJson.bp_systolic}/${aiJson.bp_diastolic} mmHg`);
+    if (aiJson.temperature_c) lines.push(`Temperature: ${aiJson.temperature_c}°C`);
+    if (aiJson.weight_kg) lines.push(`Weight: ${aiJson.weight_kg} kg`);
+    if (aiJson.gestational_weeks) lines.push(`Gestational Weeks: ${aiJson.gestational_weeks}`);
+    if (aiJson.trimester) lines.push(`Trimester: ${aiJson.trimester}`);
+    if (aiJson.anc_number) lines.push(`ANC Number: ${aiJson.anc_number}`);
+    if (aiJson.postnatal_day) lines.push(`Postnatal Day: ${aiJson.postnatal_day}`);
+    if (aiJson.muac_cm) lines.push(`MUAC: ${aiJson.muac_cm} cm`);
+    if (aiJson.tb_cough_weeks) lines.push(`Cough: ${aiJson.tb_cough_weeks} weeks`);
+    if (aiJson.bleeding === true) lines.push('Bleeding (खून)');
+    if (aiJson.seizure === true) lines.push('Seizure (दौरा)');
+    if (aiJson.breathlessness === true) lines.push('Breathlessness (साँस)');
+    if (aiJson.vaccination_due === true) lines.push('Vaccination Due (टीका बाकी)');
+    if (aiJson.vaccination_given === true) lines.push('Vaccination Given (टीका दिया)');
+    if (aiJson.tb_followup_missed === true) lines.push('TB Follow-up Missed (टीबी फॉलो-अप छूटा)');
+    setExtractedSummary(lines);
+    setShowExtracted(lines.length > 0);
+
+    // Enrich: run local keywordParser on AI transcript to catch fields Gemini may have missed
+    if (aiJson.raw_note) {
+      const localExt = parseNote(aiJson.raw_note);
+      setFields(p => ({
+        ...p,
+        bp_systolic: p.bp_systolic || (localExt.bp_systolic ? String(localExt.bp_systolic) : ''),
+        bp_diastolic: p.bp_diastolic || (localExt.bp_diastolic ? String(localExt.bp_diastolic) : ''),
+        temperature_c: p.temperature_c || (localExt.temperature_c ? String(localExt.temperature_c) : ''),
+        weight_kg: p.weight_kg || (localExt.weight_kg ? String(localExt.weight_kg) : ''),
+        gestational_weeks: p.gestational_weeks || (localExt.gestational_weeks ? String(localExt.gestational_weeks) : ''),
+        trimester: p.trimester || (localExt.trimester ? String(localExt.trimester) : ''),
+        muac_cm: p.muac_cm || (localExt.muac_cm ? String(localExt.muac_cm) : ''),
+        tb_cough_weeks: p.tb_cough_weeks || (localExt.tb_cough_weeks ? String(localExt.tb_cough_weeks) : ''),
+        bleeding: p.bleeding || (localExt.bleeding ? true : false),
+        seizure: p.seizure || (localExt.seizure ? true : false),
+        breathlessness: p.breathlessness || (localExt.breathlessness ? true : false),
+        vaccination_due: p.vaccination_due || (localExt.vaccination_due ? true : false),
+        vaccination_given: p.vaccination_given || (localExt.vaccination_given ? true : false),
+        tb_followup_missed: p.tb_followup_missed || (localExt.tb_followup_missed ? true : false),
+      }));
+      // Set visit type from local hint if AI didn't provide one
+      if (!aiJson.visit_type && localExt.visit_type_hint) {
+        setVisitType(localExt.visit_type_hint);
+      }
+    }
+  };
+
+  const handleProcessingChange = (processing) => setIsProcessingAI(processing);
+
   const handleSave = async () => {
     if(!visitType){ Alert.alert('Required','Please select visit type'); return; }
     if(!patient){ Alert.alert('Error','Patient not found'); return; }
+
+    // Auto-parse: if worker typed a raw_note but never pressed Parse, extract now
+    if (fields.raw_note && !showExtracted) {
+      const fallbackExt = parseNote(fields.raw_note);
+      const fallbackSummary = getExtractionSummary(fallbackExt);
+      if (fallbackSummary.length > 0) {
+        setFields(p => ({
+          ...p,
+          bp_systolic: p.bp_systolic || (fallbackExt.bp_systolic ? String(fallbackExt.bp_systolic) : ''),
+          bp_diastolic: p.bp_diastolic || (fallbackExt.bp_diastolic ? String(fallbackExt.bp_diastolic) : ''),
+          temperature_c: p.temperature_c || (fallbackExt.temperature_c ? String(fallbackExt.temperature_c) : ''),
+          weight_kg: p.weight_kg || (fallbackExt.weight_kg ? String(fallbackExt.weight_kg) : ''),
+          gestational_weeks: p.gestational_weeks || (fallbackExt.gestational_weeks ? String(fallbackExt.gestational_weeks) : ''),
+          trimester: p.trimester || (fallbackExt.trimester ? String(fallbackExt.trimester) : ''),
+          muac_cm: p.muac_cm || (fallbackExt.muac_cm ? String(fallbackExt.muac_cm) : ''),
+          tb_cough_weeks: p.tb_cough_weeks || (fallbackExt.tb_cough_weeks ? String(fallbackExt.tb_cough_weeks) : ''),
+          bleeding: p.bleeding || (fallbackExt.bleeding ? true : false),
+          seizure: p.seizure || (fallbackExt.seizure ? true : false),
+          breathlessness: p.breathlessness || (fallbackExt.breathlessness ? true : false),
+          vaccination_due: p.vaccination_due || (fallbackExt.vaccination_due ? true : false),
+          vaccination_given: p.vaccination_given || (fallbackExt.vaccination_given ? true : false),
+          tb_followup_missed: p.tb_followup_missed || (fallbackExt.tb_followup_missed ? true : false),
+        }));
+        if (!visitType && fallbackExt.visit_type_hint) setVisitType(fallbackExt.visit_type_hint);
+      }
+    }
+
     setSaving(true);
     try {
       const visitId = generateId();
@@ -118,12 +225,14 @@ export default function AddVisitScreen({ route, navigation }) {
         asha_id:patient.asha_id, risk_flags:risk.riskFlags});
 
       setRiskResult(risk);
-      if(isOnline()) processQueue();
+      const wasOnline = isOnline();
+      if(wasOnline) processQueue();
 
+      const syncMsg = wasOnline ? '☁️ Synced to server' : '📴 Saved offline — will sync automatically';
       Alert.alert('✅ Visit Saved',
         risk.riskLevel!=='none'
-          ? `Risk: ${risk.riskLevel.toUpperCase()}\nFlags: ${risk.riskFlags.join(', ')}`
-          : 'Visit recorded successfully.',
+          ? `Risk: ${risk.riskLevel.toUpperCase()}\nFlags: ${risk.riskFlags.join(', ')}\n\n${syncMsg}`
+          : `Visit recorded successfully.\n\n${syncMsg}`,
         [{text:'OK',onPress:()=>navigation.goBack()}]);
     } catch(err){ console.error(err); Alert.alert('Error','Failed to save visit.'); }
     finally { setSaving(false); }
@@ -163,14 +272,15 @@ export default function AddVisitScreen({ route, navigation }) {
           <SwitchRow label="Vaccination Given" value={fields.vaccination_given} onToggle={v=>updateField('vaccination_given',v)}/></>}
         {showGeneral&&<FormInput label="Temperature (°C)" value={fields.temperature_c} onChangeText={v=>updateField('temperature_c',v)} keyboardType="decimal-pad"/>}
         {visitType?<><FormInput label="📝 Hindi/Hinglish Note" value={fields.raw_note} onChangeText={v=>updateField('raw_note',v)} multiline placeholder="e.g. BP high hai, khoon bhi aa raha hai"/>
+          <AudioRecorder onResult={handleAIResult} onProcessingChange={handleProcessingChange}/>
           <TouchableOpacity style={s.parseBtn} onPress={handleParseNote}><Text style={s.parseTxt}>🔍 Parse Note / नोट पार्स करें</Text></TouchableOpacity>
           {showExtracted&&extractedSummary.length>0&&<View style={s.extBox}><Text style={s.extTitle}>हमने ये जानकारी निकाली:</Text>
             {extractedSummary.map((l,i)=><Text key={i} style={s.extLine}>• {l}</Text>)}
             <Text style={s.editHint}>✏️ You can edit fields above before saving</Text></View>}
           {riskResult&&<View style={s.riskBox}><RiskBadge riskLevel={riskResult.riskLevel}/>
             {riskResult.riskFlags.map((f,i)=><Text key={i} style={s.riskFlag}>⚠️ {f.replace(/_/g,' ')}</Text>)}</View>}
-          <TouchableOpacity style={[s.saveBtn,saving&&{opacity:0.6}]} onPress={handleSave} disabled={saving}>
-            <Text style={s.saveTxt}>{saving?'Saving...':'💾 Save Visit / विजिट सेव करें'}</Text></TouchableOpacity></>:null}
+          <TouchableOpacity style={[s.saveBtn,(saving||isProcessingAI)&&{opacity:0.6}]} onPress={handleSave} disabled={saving||isProcessingAI}>
+            <Text style={s.saveTxt}>{isProcessingAI?'🧠 AI Processing...':saving?'Saving...':'💾 Save Visit / विजिट सेव करें'}</Text></TouchableOpacity></>:null}
       </View>
     </ScrollView>
   );

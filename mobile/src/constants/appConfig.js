@@ -2,6 +2,7 @@
 export const APP_NAME = 'Village Health Assistant';
 export const APP_VERSION = '1.0.0';
 export const DB_NAME = 'village_health.db';
+export const VOICE_AUDIO_DIR = 'voice_recordings/';
 
 // ASHA worker defaults — can be changed per deployment
 export const DEFAULT_ASHA_ID = 'ASHA-001';
